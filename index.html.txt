@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>調整さん補助サイト</title>
+
+  <!-- flatpickr CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  
+  <style>
+/* 全体コンテナ：横並び */
+.main-container {
+  display: flex;
+  gap: 16px;
+  margin: 24px;
+  font-family: Arial, sans-serif;
+}
+
+/* 各カラムの幅を 3 分割 */
+.col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* カレンダーをスクロールさせない */
+.date-col #calendar {
+  width: 100%;
+}
+
+/* 時間テキストの自動伸縮 */
+#timeText {
+  width: 100%;
+  overflow: hidden;
+  resize: none;
+  font-size: 14px;
+}
+
+/* 出力テキスト */
+#outputArea {
+  width: 100%;
+  height: 300px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+/* ボタン配置 */
+.button-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.button-group button {
+  flex: 1;
+  padding: 8px;
+  cursor: pointer;
+}
+  </style>
+
+</head>
+<body>
+
+  <h1>調整さんの手助けさん</h1>
+
+<!-- flatpickr CSS -->
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+/>
+
+<div class="main-container">
+
+  <!-- 左：日付選択 -->
+  <div class="col date-col">
+    <h3>日付選択</h3>
+    <div id="calendar"></div>
+  </div>
+
+  <!-- 中：時間入力 -->
+  <div class="col time-col">
+    <h3>時間候補（1行1つ）</h3>
+    <textarea id="timeText" rows="1" placeholder="時刻を入力したら改行してください"></textarea>
+  </div>
+
+  <!-- 右：出力 + ボタン -->
+  <div class="col output-col">
+    <h3>出力</h3>
+    <textarea id="outputArea" readonly></textarea>
+
+    <div class="button-group">
+      <button id="generateBtn">候補を出力</button>
+      <button id="copyBtn">コピーする</button>
+      <button id="openChochoBtn">調整さんを開く</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script>
+    // カレンダー初期化（複数選択・常時表示）
+flatpickr("#calendar", {
+  inline: true,
+  mode: "multiple",
+  dateFormat: "Y-m-d",
+  locale: "ja"
+});
+
+// 要素取得
+const calendarEl = document.getElementById("calendar");
+const timeText = document.getElementById("timeText");
+const generateBtn = document.getElementById("generateBtn");
+const copyBtn = document.getElementById("copyBtn");
+const openChochoBtn = document.getElementById("openChochoBtn");
+const outputArea = document.getElementById("outputArea");
+
+// 候補配列（これまでの分も保持）
+let slots = [];
+
+// 時間欄自動サイズ調整
+timeText.addEventListener("input", () => {
+  timeText.style.height = "auto";
+  timeText.style.height = timeText.scrollHeight + "px";
+});
+timeText.style.height = "auto";
+
+// ■ 候補を出力する
+generateBtn.addEventListener("click", () => {
+
+  // 選択された日付を取得
+  const dates = calendarEl._flatpickr.selectedDates.map(d => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  });
+
+  if (dates.length === 0) {
+    alert("日付を1つ以上選択してください。");
+    return;
+  }
+
+  const times = timeText.value
+    .split("\n")
+    .map(t => t.trim())
+    .filter(t => t !== "");
+
+  // 今回の候補を追加
+  dates.forEach(date => {
+    // 時刻がない場合は日付だけ
+    if (times.length === 0) {
+      slots.push({ date, time: "" });
+    } else {
+      times.forEach(time => {
+        slots.push({ date, time });
+      });
+    }
+  });
+
+  // 並び替え（日付→時間）
+  slots.sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+
+    // 時刻がない場合は先に来るようにする
+    if (a.time === "" && b.time !== "") return -1;
+    if (a.time !== "" && b.time === "") return 1;
+
+    return a.time < b.time ? -1 : 1;
+  });
+
+  // 出力エリアに反映
+  const textOutput = slots
+    .map(s => (s.time ? `${s.date} ${s.time}` : `${s.date}`))
+    .join("\n");
+  outputArea.value = textOutput;
+
+  // 日付だけリセット（時刻は残す）
+  calendarEl._flatpickr.clear();
+});
+
+// ■ コピー処理
+copyBtn.addEventListener("click", () => {
+  if (!outputArea.value) {
+    alert("候補がありません。生成してください。");
+    return;
+  }
+  navigator.clipboard.writeText(outputArea.value)
+    .then(() => alert("コピーしました"))
+    .catch(() => alert("コピーに失敗しました"));
+});
+
+// ■ 調整さんを開く（正しいリンク）
+openChochoBtn.addEventListener("click", () => {
+  window.open("https://chouseisan.com/", "_blank");
+});
+
+  </script>
+
+</body>
+</html>
